@@ -3,7 +3,12 @@ package program.core;
 import program.core.gui.ModulatorGui;
 
 public class Main {
+	public static ModulatorGui gui;
 	public static void main(String args[]){
-		new ModulatorGui(600,(int) (600 * .61f));
+		gui = new ModulatorGui(1000,(int) (1000 * .61f));
+		while(!gui.closeRequested){
+			gui.update();
+		}
+		System.exit(0);
 	}
 }
