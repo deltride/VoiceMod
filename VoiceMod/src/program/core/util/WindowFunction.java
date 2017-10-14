@@ -4,7 +4,12 @@ public class WindowFunction {
 	private static final float TWO_PI = (float) (Math.PI * 2);
 	
 	//https://en.wikipedia.org/wiki/Window_function
-	
+	public static float[] rootNormalize(float[] func){
+		for(int i = 0 ; i < func.length ; i++){
+			func[i] = (float) Math.sqrt(func[i]);
+		}
+		return func;
+	}
 	public static float[] RECTANGLE(int size){
 		float[] w = new float[size];
 		for(int n = 0 ; n < size ; n++){

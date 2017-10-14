@@ -1,5 +1,9 @@
 package program.core.audio;
 
+import javax.swing.BorderFactory;
+import javax.swing.JPanel;
+import javax.swing.border.TitledBorder;
+
 import org.jtransforms.fft.FloatFFT_1D;
 
 import program.core.gui.EffectMenu;
@@ -20,7 +24,7 @@ public class AudioCoder {
 		this.sampleSize = sampleSize;
 		fft = new FloatFFT_1D(sampleSize*2);
 		Frame.updateBaseFrequency(sampleSize);
-		windowFunc = WindowFunction.TUKEY(sampleSize*2);
+		windowFunc = WindowFunction.rootNormalize(WindowFunction.HAMMING(sampleSize*2));
 		overlap = new float[2][sampleSize];
 		effectMenu = new EffectMenu();
 		firstPass = true;
@@ -76,16 +80,6 @@ public class AudioCoder {
 		return res;
 	}
 	
-	public float[][] sampleAudio(Frame f){
-		int halfSample = sampleSize/2;
-		float[][] dat = f.getRaw();
-		float[][] pass = new float[2][sampleSize];
-		fft.realInverse(dat[0], true);
-		fft.realInverse(dat[1], true);
-		System.arraycopy(dat[0], halfSample, pass[0], 0, sampleSize);
-		System.arraycopy(dat[1], halfSample, pass[1], 0, sampleSize);
-		return pass;
-	}
 
 	public int getSampleSize() {
 		return sampleSize;

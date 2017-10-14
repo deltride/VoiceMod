@@ -1,11 +1,18 @@
 package program.core.audio.effect;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
 import javax.swing.JLabel;
 import javax.swing.JSlider;
+import javax.swing.JTextField;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import program.core.audio.AudioEffect;
+import program.core.audio.Channel;
 import program.core.audio.Frame;
 
 public class Echo implements AudioEffect{
@@ -13,21 +20,23 @@ public class Echo implements AudioEffect{
 	private double decay;
 	private float peak;
 	private EffectPanel gui;
-	public Echo(float time, float peak){
+	private String channel;
+	public Echo(float time, float peak, String channel){
 		amplitudes = new double[2][1];
 		//calculate per sample decay to achieve .1 original amplitude after [time] seconds
 		//10^(log(.1)/samplesAcrossPeriod)
 		decay = Math.pow(10, -1/(time * Frame.getBaseFrequency() * 2));// *2 base because overlapping samples
 		this.peak = peak;
-		genGui();
+		this.channel = channel;
+		genGui(time);
 	}
 	public void setTime(float time){
 		decay = Math.pow(10, -1/(time * Frame.getBaseFrequency() * 2));
 	}
 	public Echo(){
-		this(2,5);
+		this(2,5,"main");
 	}
-	private void genGui(){
+	private void genGui(float time){
 		gui = AudioEffect.super.getGUI();
 		JSlider sliderPeak;
 		gui.add(sliderPeak = EffectPanel.genSlider(1, 75, 300, 50, "Peak", 0, 500, (int)(peak*10), 10, 50, false));
@@ -44,7 +53,7 @@ public class Echo implements AudioEffect{
 		gui.add(identifier);
 
 		JSlider sliderTime;
-		gui.add(sliderTime = EffectPanel.genSlider(1, 155, 300, 50, "Decay Time", 0, 500, (int)(decay*100), 10, 100, false));
+		gui.add(sliderTime = EffectPanel.genSlider(1, 155, 300, 50, "Decay Time", 0, 500, (int)(time*100), 10, 100, false));
 		JLabel identifierA = new JLabel("Decay Time: "+(sliderTime.getValue()/100f)+"s");
 		identifierA.setHorizontalAlignment(JLabel.CENTER);
 		identifierA.setBounds(1,130,300,25);
@@ -56,20 +65,55 @@ public class Echo implements AudioEffect{
 			}
 		});
 		gui.add(identifierA);
+		
+		JTextField channelField;
+		gui.add(channelField = new JTextField(channel));
+		channelField.setBounds(1, 235, 300, 25);
+		JLabel identifierChannel = new JLabel("Channel: "+channelField.getText());
+		identifierChannel.setHorizontalAlignment(JLabel.CENTER);
+		identifierChannel.setBounds(1,210,300,25);
+		channelField.getDocument().addDocumentListener(new DocumentListener(){
+			public void changedUpdate(DocumentEvent e) {
+				change();
+			}
+			public void removeUpdate(DocumentEvent e) {
+				change();
+			}
+			public void insertUpdate(DocumentEvent e) {
+				change();
+			}
+			public void change() {
+				channel = channelField.getText();
+				identifierChannel.setText("Channel: "+channel);
+			}
+		});
+		channelField.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				channel = channelField.getText();
+				identifierChannel.setText("Channel: "+channel);
+			}
+		});
+		gui.add(identifierChannel);
 	}
 	@Override
 	public void pass(Frame f) {
+		Channel c = f.getSubChannel(channel);
+		if(c == null){
+			return;
+		}
+		c.decompose();
 		if(Frame.getSamples() != amplitudes[0].length){
 			amplitudes[0] = new double[Frame.getSamples()];
 			amplitudes[1] = new double[Frame.getSamples()];
 		}
 		for(int i = 0 ; i < Frame.getSamples() ; i++){
-			double m1 = f.getMagnitude(0, i);
-			double m2 = f.getMagnitude(1, i);
+			double m1 = c.getMagnitude(0, i);
+			double m2 = c.getMagnitude(1, i);
 			double dAmpA = Math.min(m1,peak);
 			double dAmpB = Math.min(m2,peak);
-			f.setMagnitude(0, i, m1+amplitudes[0][i]);
-			f.setMagnitude(1, i, m2+amplitudes[1][i]);
+			c.setMagnitude(0, i, m1+amplitudes[0][i]);
+			c.setMagnitude(1, i, m2+amplitudes[1][i]);
 			amplitudes[0][i] = Math.max(dAmpA, amplitudes[0][i]) * decay;
 			amplitudes[1][i] = Math.max(dAmpB, amplitudes[1][i]) * decay;
 		}
@@ -100,6 +144,17 @@ public class Echo implements AudioEffect{
 	@Override
 	public EffectPanel getGUI() {
 		return gui;
+	}
+	@Override
+	public String saveToString() {
+		return channel.replaceAll(":", "")+":"+peak+":"+decay;
+	}
+	@Override
+	public AudioEffect fromString(String s) {
+		String[] val = s.split(":");
+		Echo e = new Echo(1,Float.parseFloat(val[1]),val[0]);
+		e.decay = Double.parseDouble(val[2]);
+		return e;
 	}
 
 }

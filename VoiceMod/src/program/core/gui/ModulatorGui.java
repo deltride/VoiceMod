@@ -90,7 +90,7 @@ public class ModulatorGui {
 		JButton testB = new JButton("Play");
 		testB.setBounds(900,0,100,50);
 		testB.addActionListener(new PlayListener(mainSource));
-		frame.add(testB);
+		//frame.add(testB);
 	}
 	private void initializeALContext(){
 		AudioMaster.initAL();

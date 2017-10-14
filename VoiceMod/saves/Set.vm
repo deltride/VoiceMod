@@ -1,0 +1,6 @@
+FFTPRE
+program.core.audio.effect.WaveformSynthesizer :|: synth:440.0
+FFT
+program.core.audio.effect.Harmonizer :|: main:000100100000
+FFTPOST
+program.core.audio.effect.ChannelListener :|: synth:main

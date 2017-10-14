@@ -13,6 +13,8 @@ public interface AudioEffect {
 	public String getName();
 	public boolean getDecomposedCompatible();
 	public boolean getComposedCompatible();
+	public String saveToString();
+	public AudioEffect fromString(String s);
 	public class EffectPanel extends JPanel{
 		private static final long serialVersionUID = 1L;
 		public EffectPanel(){

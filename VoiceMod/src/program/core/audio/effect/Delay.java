@@ -16,43 +16,32 @@ import program.core.audio.AudioEffect;
 import program.core.audio.Channel;
 import program.core.audio.Frame;
 
-public class ReverseEcho implements AudioEffect {
-	private LinkedList<double[][]> dat;
-	private double scale;
-	private double minScale;
+public class Delay implements AudioEffect{
+	private LinkedList<Channel> dat;
 	private float time;
 	private int timeDom;
-	private float peak;
-	private double integrationFactor;
 	private String channel;
 
 	EffectPanel gui;
 
-	public ReverseEcho(float time, float minScale, float peak, String channel) {
-		dat = new LinkedList<double[][]>();
-		this.peak = peak;
-		this.minScale = minScale;
+	public Delay(float time, String channel) {
+		dat = new LinkedList<Channel>();
 		this.channel = channel;
 		setTime(time);
 		genGui();
 	}
 
-	public ReverseEcho() {
-		this(2, .1f, 5, "main");
+	public Delay() {
+		this(2, "main");
 	}
 
 	public void setTime(float time) {
 		this.time = time;
 		timeDom = (int) Math.floor(time * Frame.getBaseFrequency() * 2);
-		scale = Math.pow(10, Math.log(minScale) / timeDom);
-		// integrate [scale^x from 0 to timeDom] to find area so we can average
-		// properly
-		integrationFactor = Math.log(scale);
-		integrationFactor = Math.pow(scale, timeDom) / integrationFactor - (1 / integrationFactor);
 		// remove or add empty samples to simulate an absent echo until the
 		// audio stream is initiated
 		while (dat.size() < timeDom) {
-			dat.addFirst(new double[2][1]);
+			dat.addFirst(new Channel(new float[2][1]));
 		}
 		while (dat.size() > timeDom) {
 			dat.removeFirst();
@@ -61,31 +50,18 @@ public class ReverseEcho implements AudioEffect {
 
 	private void genGui() {
 		gui = AudioEffect.super.getGUI();
-		JSlider sliderPeak;
-		gui.add(sliderPeak = EffectPanel.genSlider(1, 75, 300, 50, "Peak", 0, 500, (int) (peak * 10), 10, 50, false));
-		JLabel identifier = new JLabel("Peak: " + (sliderPeak.getValue() / 10f));
-		identifier.setHorizontalAlignment(JLabel.CENTER);
-		identifier.setBounds(1, 50, 300, 25);
-		sliderPeak.addChangeListener(new ChangeListener() {
-			@Override
-			public void stateChanged(ChangeEvent e) {
-				peak = sliderPeak.getValue() / 10f;
-				identifier.setText("Peak: " + (sliderPeak.getValue() / 10f));
-			}
-		});
-		gui.add(identifier);
-
+		
 		JSlider sliderTime;
-		gui.add(sliderTime = EffectPanel.genSlider(1, 155, 300, 50, "DecayTime", 0, 500, (int) (time * 100), 10, 100,
+		gui.add(sliderTime = EffectPanel.genSlider(1, 155, 300, 50, "DelayTime", 0, 500, (int) (time * 100), 10, 100,
 				false));
-		JLabel identifierA = new JLabel("Decay Time: " + (sliderTime.getValue() / 100f) + "s");
+		JLabel identifierA = new JLabel("Delay Time: " + (sliderTime.getValue() / 100f) + "s");
 		identifierA.setHorizontalAlignment(JLabel.CENTER);
 		identifierA.setBounds(1, 130, 300, 25);
 		sliderTime.addChangeListener(new ChangeListener() {
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				setTime(sliderTime.getValue() / 100f);
-				identifierA.setText("Decay Time: " + (sliderTime.getValue() / 100f) + "s");
+				identifierA.setText("Delay Time: " + (sliderTime.getValue() / 100f) + "s");
 			}
 		});
 		gui.add(identifierA);
@@ -148,45 +124,36 @@ public class ReverseEcho implements AudioEffect {
 		if(c == null){
 			return;
 		}
-		c.decompose();
-		Object[] array = dat.toArray();
-		double[][] thisFrame = new double[2][Frame.getSamples()];
-		for (int t = 0; t < array.length; t++) {
-			double[][] sample = (double[][]) array[t];
-			if (sample[0].length != Frame.getSamples()) {
-				continue;
+		Channel thisFrame = dat.pollFirst();
+		//swap channel data, if the frame lengths differ, just send an empty one
+		float[][] val;
+		int l;
+		if(thisFrame.getRaw()[0].length != (l = c.getRaw()[0].length)){
+			val = new float[2][l];
+			thisFrame.setRaw(c.getRaw());
+			c.setRaw(val);
+			if(c.isDecomposed()){
+				double[][] mag = new double[2][l];
+				thisFrame.setMagnitudes(c.getMagnitudes());
+				c.setMagnitudes(mag);
 			}
-			double scaleFactor = Math.pow(scale, t + 1);// maybe implement this
-														// into standard echoes
-														// as
-														// pow(scale,timeDom-t)
-			for (int i = 0; i < sample[0].length; i++) {
-				// get the largest frequency sample overall to add to the stream
-
-				// METHOD 1: MAXING
-//				thisFrame[0][i] = Math.max(thisFrame[0][i], sample[0][i] * scaleFactor);
-//				thisFrame[1][i] = Math.max(thisFrame[1][i], sample[1][i] * scaleFactor);
-
-				// METHOD 2: AVERAGING
-				thisFrame[0][i] += sample[0][i]*scaleFactor/integrationFactor;
-				thisFrame[1][i] += sample[1][i]*scaleFactor/integrationFactor;
+			dat.addLast(thisFrame);
+		}else{
+			val = thisFrame.getRaw();
+			thisFrame.setRaw(c.getRaw());
+			c.setRaw(val);
+			if(c.isDecomposed()){
+				double[][] mag = thisFrame.getMagnitudes();
+				thisFrame.setMagnitudes(c.getMagnitudes());
+				c.setMagnitudes(mag);
 			}
+			dat.addLast(thisFrame);
 		}
-		// update the buffer, adding the newest and removing the oldest
-		dat.pollFirst();
-		double[][] mag = new double[2][thisFrame[0].length];
-		for (int i = 0; i < mag[0].length; i++) {
-			mag[0][i] = Math.min(c.getMagnitude(0, i), peak);
-			mag[1][i] = Math.min(c.getMagnitude(1, i), peak);
-			c.setMagnitude(0, i, thisFrame[0][i]);
-			c.setMagnitude(1, i, thisFrame[1][i]);
-		}
-		dat.addLast(mag);
 	}
 
 	@Override
 	public String getName() {
-		return "Reverse Echo";
+		return "Delay";
 	}
 
 	@Override
@@ -196,7 +163,7 @@ public class ReverseEcho implements AudioEffect {
 
 	@Override
 	public boolean getComposedCompatible() {
-		return false;
+		return true;
 	}
 
 	@Override
@@ -206,12 +173,12 @@ public class ReverseEcho implements AudioEffect {
 
 	@Override
 	public String saveToString() {
-		return channel.replaceAll(":", "")+":"+peak+":"+time;
+		return channel.replaceAll(":", "")+":"+time;
 	}
 
 	@Override
 	public AudioEffect fromString(String s) {
 		String[] val = s.split(":");
-		return new ReverseEcho(Float.parseFloat(val[2]),.1f,Float.parseFloat(val[1]),val[0]);
+		return new Delay(Float.parseFloat(val[1]),val[0]);
 	}
 }

@@ -58,4 +58,12 @@ public class LowPass implements AudioEffect{
 	public boolean getComposedCompatible() {
 		return false;
 	}
+	@Override
+	public String saveToString() {
+		return null;
+	}
+	@Override
+	public AudioEffect fromString(String s) {
+		return null;
+	}
 }
