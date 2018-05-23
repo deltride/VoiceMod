@@ -9,7 +9,8 @@ public class Frame extends Channel{
 	private static float baseFrequency;
 	private Map<String,Channel> subChannels;
 	/**
-	 * Generates a frame object from the raw post-FFT data
+	 * Generates a frame object from the raw post-FFT data.
+	 * <p>Each frame has a main and sub channels for handling more complex features</p>
 	 */
 	public Frame(float[][] raw) {
 		super(raw);

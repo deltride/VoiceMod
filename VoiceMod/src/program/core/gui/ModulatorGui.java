@@ -1,26 +1,19 @@
 package program.core.gui;
 
 import java.awt.Color;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.sound.sampled.AudioFormat;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 
 import program.core.audio.AudioCoder;
 import program.core.audio.AudioManager;
 import program.core.audio.InputLineListener;
 import program.core.audio.OutputLineWriter;
-import program.core.audio.openal.AudioMaster;
-import program.core.audio.openal.Source;
 
 public class ModulatorGui {
-	private static int SOUND;
 	private JFrame frame;
-	private Source mainSource;
 	private DevicePanel devices;
 	private ToggleButton deviceActive;
 	private AudioCoder audio;
@@ -31,23 +24,17 @@ public class ModulatorGui {
 
 	public ModulatorGui(int width, int height) {
 		closeRequested = false;
-		initializeALContext();
 		frame = new JFrame();
 		initializeGui();
 		frame.setSize(width, height);
 		frame.setLayout(null);
 		frame.setVisible(true);
 		frame.setResizable(false);
-		SOUND = AudioMaster.loadSoundfile("res/sound/SampleSound.wav");
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				// TODO destroy all sources
 				micIn.close();
 				speakerOut.close();
-				
-				mainSource.delete();
-				AudioMaster.destroyAL();
 				closeRequested = true;
 			}
 		});
@@ -87,14 +74,6 @@ public class ModulatorGui {
 		frame.add(audio.getEffectMenu().getPipelineDisplay());
 		frame.add(audio.getEffectMenu().getEffectDisplay());
 		frame.add(audio.getEffectMenu().getPipelineHandlerMenu());
-		JButton testB = new JButton("Play");
-		testB.setBounds(900,0,100,50);
-		testB.addActionListener(new PlayListener(mainSource));
-		//frame.add(testB);
-	}
-	private void initializeALContext(){
-		AudioMaster.initAL();
-		mainSource = new Source();
 	}
 	public void reloadDevices(){
 		micIn.close();
@@ -137,16 +116,5 @@ public class ModulatorGui {
 
 	public JFrame getFrame() {
 		return frame;
-	}
-
-	static class PlayListener implements ActionListener {
-		Source s;
-		public PlayListener(Source s){
-			this.s = s;
-		}
-		@Override
-		public void actionPerformed(ActionEvent event) {
-			s.playSound(SOUND);
-		}
 	}
 }

@@ -1,9 +1,5 @@
 package program.core.audio;
 
-import javax.swing.BorderFactory;
-import javax.swing.JPanel;
-import javax.swing.border.TitledBorder;
-
 import org.jtransforms.fft.FloatFFT_1D;
 
 import program.core.gui.EffectMenu;
@@ -40,6 +36,7 @@ public class AudioCoder {
 
 	public float[][] passAudio(float[][] decoded){
 		if(firstPass){
+			//initializing in the most disgusting way ever
 			firstPass = false;
 			System.arraycopy(decoded[0], 0, overlap[0], 0, sampleSize);
 			System.arraycopy(decoded[1], 0, overlap[1], 0, sampleSize);

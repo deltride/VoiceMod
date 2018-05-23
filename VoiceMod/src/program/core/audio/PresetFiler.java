@@ -70,8 +70,11 @@ public class PresetFiler {
 	}
 	public static List<String> getPresets(){
 		File dir = new File("saves");
-		File[] c = dir.listFiles();
 		List<String> list = new ArrayList<String>();
+		if(!dir.exists()){
+			return list;
+		}
+		File[] c = dir.listFiles();
 		for(File f : c){
 			String s = f.getName();
 			if(s.endsWith(".vm"))
@@ -85,15 +88,25 @@ public class PresetFiler {
 			File f = new File("saves/"+name+".vm");
 			reader = new BufferedReader(new FileReader(f));
 			String line;
-			DefaultMutableTreeNode node = instance.getPreFftNode();
-			TreeModel tree = instance.getEffectPreFft().getModel();
+			DefaultMutableTreeNode node = instance.getPostFftNode();
+			DefaultTreeModel tree = (DefaultTreeModel) instance.getEffectPostFft().getModel();
+			node.removeAllChildren();
+			node = instance.getFftNode();
+			tree.reload();
+			tree = (DefaultTreeModel) instance.getEffectFft().getModel();
+			node.removeAllChildren();
+			tree.reload();
+			node = instance.getPreFftNode();
+			tree = (DefaultTreeModel) instance.getEffectPreFft().getModel();
+			node.removeAllChildren();
+			tree.reload();
 			while((line = reader.readLine()) != null){
 				if(line.equals("FFT")){
 					node = instance.getFftNode();
-					tree = instance.getEffectFft().getModel();
+					tree = (DefaultTreeModel) instance.getEffectFft().getModel();
 				}else if(line.equals("FFTPOST")){
 					node = instance.getPostFftNode();
-					tree = instance.getEffectPostFft().getModel();
+					tree = (DefaultTreeModel) instance.getEffectPostFft().getModel();
 				}else if(line.contains(":|:")){
 					String[] val = line.split(" :|: ");
 					try{
@@ -101,7 +114,7 @@ public class PresetFiler {
 					Constructor<? extends AudioEffect> inst = ((Class<? extends AudioEffect>)Class.forName(val[0])).getConstructor();
 					AudioEffect effect = inst.newInstance().fromString(val[2]);
 					node.add(new EffectNode(effect));
-					((DefaultTreeModel)tree).reload();
+					tree.reload();
 					}catch(Exception e){e.printStackTrace();}
 				}
 			}
